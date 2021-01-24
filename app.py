@@ -64,5 +64,58 @@ def home():
     return 'sanity check'
 
 
+# --------------------------------------------------------------
+# USER ROUTES
+
+
+@app.route('/user', methods=['GET'])
+def get_all_users():
+    return 'user lsit'
+
+
+@app.route('/user/register', methods=['POST'])
+def create_user():
+    return 'register'
+
+
+@app.route('/user/login', methods=['POST'])
+def login():
+    return 'login'
+
+
+# --------------------------------------------------------------
+# RECIPE ROUTES
+
+
+@app.route('/recipe', methods=['GET'])
+def get_all_recipes():
+    return 'get all recipes'
+
+
+@app.route('/recipe', methods=['POST'])
+def create_recipe():
+    return 'create a recipe'
+
+
+@app.route('/recipe/<int:user_id>', methods=['GET'])
+def get_user_recipes(user_id):
+    return 'get user recipes'
+
+
+@app.route('/recipe/<int:recipe_id>', methods=['POST'])
+def rate_recipe(recipe_id):
+    return 'rate a recipe'
+
+
+# --------------------------------------------------------------
+# INGREDIENT ROUTES
+
+
+@app.route('/ingredient', methods=['GET'])
+def get_top_ingredients():
+    return 'get top 5 most used ingredients'
+
+
+
 if __name__ == '__main__':
     app.run(debug=True)
