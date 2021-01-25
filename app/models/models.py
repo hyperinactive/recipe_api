@@ -10,6 +10,8 @@ from datetime import datetime
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
+    public_id = db.Column(db.String(50), unique=True)
+
     email = db.Column(db.String(100), unique=True, nullable=False)
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
@@ -28,7 +30,9 @@ class Recipe(db.Model):
 
     name = db.Column(db.String(50), nullable=False)
     text = db.Column(db.String(150), nullable=False)
-    rating = db.Column(db.Float, default=0)
+    average_rating = db.Column(db.Float, default=0)
+    rating_points = db.Column(db.Integer, default=0)
+    rating_count = db.Column(db.Integer, default=0)
     date_created = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
