@@ -1,6 +1,6 @@
 import os, jwt
 from flask import Flask, Blueprint, jsonify, request, make_response
-from app import db
+from app import db, hunter
 from app.models.models import User
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
@@ -66,6 +66,12 @@ def create_user():
     data = request.get_json()
 
     try:
+        # hunter
+        verify = hunter.email_verifier(data['email'])
+        if verify.get('status') != 'valid':
+            return jsonify({'message': 'Email address not verified'})
+
+
         hashed_password = generate_password_hash(str(data['password']), method='sha256')
         new_user = User(
             email=data['email'], 

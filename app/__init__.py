@@ -1,11 +1,13 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from pyhunter import PyHunter
 from dotenv import load_dotenv
 import os
 
 
 load_dotenv()
 db = SQLAlchemy()
+hunter = PyHunter(os.environ.get('HUNTER_API_KEY'))
 
 # create an app instance
 def create_app(config_class=None):

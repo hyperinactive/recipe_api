@@ -64,7 +64,7 @@ class Recipe(db.Model):
 class Ingredient(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
-    name = db.Column(db.String(50), nullable=False)
+    name = db.Column(db.String(50), nullable=False, index=True)
 
     used = db.relationship('Recipe', secondary=ingredients_used, backref=db.backref('used', lazy='dynamic'))
 
