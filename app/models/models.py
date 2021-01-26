@@ -70,4 +70,4 @@ class Ingredient(db.Model):
 
 
     def __repr__(self):
-        return f'Ingredient("{self.name}"), ("{self.times_used}"), ("{self.recipe_id}")'
+        return f'Ingredient("{self.name}")'

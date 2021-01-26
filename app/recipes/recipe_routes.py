@@ -11,22 +11,99 @@ recipes = Blueprint('recipes', __name__)
 
 
 @recipes.route('/recipe', methods=['GET'])
-def get_all_recipes():
-    return jsonify({'message': 'get all recipes'})
+@token_required
+def get_all_recipes(current_user):
+    recipes = Recipe.query.all()
+    output = []
+    for recipe in recipes:
+        recipe_obj = {}
+        recipe_obj['name'] = recipe.name
+        recipe_obj['average_rating'] = recipe.average_rating
+        recipe_obj['text'] = recipe.name
+        recipe_obj['author'] = recipe.author.email
+        recipe_obj['ingredients'] = []
+
+        for ingredient in recipe.used:
+            recipe_obj['ingredients'].append(ingredient.name)
+            
+        output.append(recipe_obj)
+
+    return jsonify(output)
 
 
 @recipes.route('/recipe', methods=['POST'])
 @token_required
 def create_recipe(current_user):
-    return jsonify({'message': 'create a recipe'})
+    data = request.get_json()
+
+    try:
+        for item in data:
+            new_recipe = Recipe(
+                name=item['name'],
+                text=item['text'],
+                author=current_user
+            )
+            for ingredient_item in item['ingredients']:
+                # check for an existing ingredient
+                new_ingredient = Ingredient.query.filter(Ingredient.name.ilike(ingredient_item)).first()
+                if not new_ingredient:
+                    new_ingredient = Ingredient(name=ingredient_item)
+                    db.session.add(new_ingredient)
+                    db.session.commit()
+
+                # either way create a relationship
+                new_recipe.used.append(new_ingredient)
+                
+            db.session.commit()
+    except:
+        return jsonify({'message': 'Invalid or missing attributes'}), 400
 
 
-# todo need no user id, identify users via JWT!?
-@recipes.route('/recipe/<int:user_id>', methods=['GET'])
-def get_user_recipes(user_id):
-    return jsonify({'message': 'get user recipes'})
+    return jsonify({'message': 'Recipe/s successfully created'})
+
+
+@recipes.route('/recipe/mine', methods=['GET'])
+@token_required
+def get_user_recipes(current_user):
+    own_recipes = Recipe.query.filter_by(author_id=current_user.id).all()
+
+    output = []
+    for recipe in own_recipes:
+        recipe_obj = {}
+        recipe_obj['name'] = recipe.name
+        recipe_obj['average_rating'] = recipe.average_rating
+        recipe_obj['text'] = recipe.name
+        recipe_obj['author'] = recipe.author.email
+        recipe_obj['ingredients'] = []
+
+        for ingredient in recipe.used:
+            recipe_obj['ingredients'].append(ingredient.name)
+            
+        output.append(recipe_obj)
+        
+
+    return jsonify(output)
 
 
 @recipes.route('/recipe/<int:recipe_id>', methods=['POST'])
-def rate_recipe(recipe_id):
-    return jsonify({'message': 'rate a recipe'})
+@token_required
+def rate_recipe(current_user, recipe_id):
+    recipe = Recipe.query.filter_by(id=recipe_id).first()
+
+    if recipe.author_id == current_user.id or current_user in recipe.reviewers:
+        return jsonify({'message': 'Cannot rate your own recipes or rate one recipe multiple times'}), 403
+
+    rating = request.get_json()['rating']
+    if rating not in range(1,6):
+        return jsonify({'message': 'Rating must be 1-5'}), 401
+
+    # update the rating
+    recipe.rating_points += rating
+    recipe.rating_count += 1
+    recipe.average_rating = recipe.rating_points / recipe.rating_count
+
+    recipe.reviewers.append(current_user)
+
+    db.session.commit()
+
+    return jsonify({'message': f'Recipe {recipe.name} successfully rated: {rating}'}), 201
