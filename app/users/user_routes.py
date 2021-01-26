@@ -1,4 +1,4 @@
-import os, jwt, uuid
+import os, jwt
 from flask import Flask, Blueprint, jsonify, request, make_response
 from app import db
 from app.models.models import User
@@ -26,7 +26,7 @@ def token_required(f):
         try:
             # decode the token and find a user that matches the id
             data = jwt.decode(token, os.environ.get('SECRET_KEY') , algorithms=['HS256'])
-            current_user = User.query.filter_by(public_id=data['public_id']).first()
+            current_user = User.query.filter_by(id=data['id']).first()
 
             if not current_user:
                 return jsonify({'message': 'No user found'}), 404
@@ -42,6 +42,8 @@ def token_required(f):
 
 # --------------------------------------------------------------
 # USER ROUTES
+
+
 @users.route('/user', methods=['GET'])
 @token_required
 def get_all_users(current_user):
@@ -51,7 +53,6 @@ def get_all_users(current_user):
     for user in users:
         user_data = {}
         user_data['id'] = user.id
-        user_data['public_id'] = user.public_id
         user_data['first_name'] = user.first_name
         user_data['last_name'] = user.last_name
         user_data['email'] = user.email
@@ -68,7 +69,6 @@ def create_user():
         hashed_password = generate_password_hash(str(data['password']), method='sha256')
         new_user = User(
             email=data['email'], 
-            public_id=str(uuid.uuid4()),
             first_name=data['first_name'], 
             last_name=data['last_name'], 
             password=hashed_password
@@ -100,7 +100,7 @@ def login():
     # todo 30min exp too long
     if check_password_hash(user.password, auth.password):
         token = jwt.encode({
-            'public_id': user.public_id,
+            'id': user.id,
             'exp': datetime.utcnow() + timedelta(minutes=30)
             }, os.environ.get('SECRET_KEY'))
 

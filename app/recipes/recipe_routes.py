@@ -1,7 +1,7 @@
-from flask import Flask, Blueprint, jsonify
+from flask import Flask, Blueprint, jsonify, request
 from app import db
-# todo import models when the db work starts
-
+from app.users.user_routes import token_required
+from app.models.models import Recipe, User, Ingredient
 
 recipes = Blueprint('recipes', __name__)
 
@@ -16,7 +16,8 @@ def get_all_recipes():
 
 
 @recipes.route('/recipe', methods=['POST'])
-def create_recipe():
+@token_required
+def create_recipe(current_user):
     return jsonify({'message': 'create a recipe'})
 
 

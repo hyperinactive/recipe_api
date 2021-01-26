@@ -7,10 +7,26 @@ from datetime import datetime
 # MODELS
 
 
+# association table recipes_rated
+# reviewers - User <-> Recipe
+user_reviews = db.Table('user_reviews',
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
+    db.Column('recipe_id', db.Integer, db.ForeignKey('recipe.id')),
+)
+
+# association table ingredients used
+# ingredients_used - Recipe <-> Ingredient
+ingredients_used = db.Table('ingredients_used',
+    db.Column('recepe_id', db.Integer, db.ForeignKey('recipe.id')),
+    db.Column('ingredient_id', db.Integer, db.ForeignKey('ingredient.id')),
+)
+
+
+# User -> Recipe
+# creation: One -> Many
+# reating: Many -> Many
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-
-    public_id = db.Column(db.String(50), unique=True)
 
     email = db.Column(db.String(100), unique=True, nullable=False)
     first_name = db.Column(db.String(50), nullable=False)
@@ -19,7 +35,8 @@ class User(db.Model):
 
     # lazy load when necessary, author ref
     recipes_created = db.relationship('Recipe', backref='author', lazy=True)
-    recipes_rated = db.relationship('Recipe', backref='rated', lazy=True)
+    # though declared here, it actually resides in the Recipe model
+    recipes_rated = db.relationship('Recipe', secondary=user_reviews, backref=db.backref('reviewers', lazy='dynamic'))
 
     def __repr__(self):
         return f'User("{self.first_name}"), ("{self.last_name}"), ("{self.email}")'
@@ -35,20 +52,22 @@ class Recipe(db.Model):
     rating_count = db.Column(db.Integer, default=0)
     date_created = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    ingredients = db.relationship('Ingredient', backref='recipe', lazy=True)
+    author_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
 
     def __repr__(self):
         return f'Recipe("{self.name}"), ("{self.text}"), ("{self.rating}"), ("{self.user_id}")'
 
 
+# Recipe -> Ingredient
+# used: Many -> Many
 class Ingredient(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
     name = db.Column(db.String(50), nullable=False)
-    times_used = db.Column(db.Integer, default=0)
 
-    recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
+    used = db.relationship('Recipe', secondary=ingredients_used, backref=db.backref('used', lazy='dynamic'))
+
 
     def __repr__(self):
         return f'Ingredient("{self.name}"), ("{self.times_used}"), ("{self.recipe_id}")'
