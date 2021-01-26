@@ -17,7 +17,7 @@ user_reviews = db.Table('user_reviews',
 # association table ingredients used
 # ingredients_used - Recipe <-> Ingredient
 ingredients_used = db.Table('ingredients_used',
-    db.Column('recepe_id', db.Integer, db.ForeignKey('recipe.id')),
+    db.Column('recipe_id', db.Integer, db.ForeignKey('recipe.id')),
     db.Column('ingredient_id', db.Integer, db.ForeignKey('ingredient.id')),
 )
 
@@ -56,7 +56,7 @@ class Recipe(db.Model):
 
 
     def __repr__(self):
-        return f'Recipe("{self.name}"), ("{self.text}"), ("{self.rating}"), ("{self.user_id}")'
+        return f'Recipe("{self.name}"), ("{self.text}"), ("{self.average_rating}"), ("{self.author_id}")'
 
 
 # Recipe -> Ingredient

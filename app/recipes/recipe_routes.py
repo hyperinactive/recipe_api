@@ -1,7 +1,8 @@
 from flask import Flask, Blueprint, jsonify, request
 from app import db
 from app.users.user_routes import token_required
-from app.models.models import Recipe, User, Ingredient
+from app.models.models import Recipe, User, Ingredient, ingredients_used
+from sqlalchemy import and_
 
 recipes = Blueprint('recipes', __name__)
 
@@ -14,6 +15,10 @@ recipes = Blueprint('recipes', __name__)
 @token_required
 def get_all_recipes(current_user):
     recipes = Recipe.query.all()
+
+    if not recipes:
+        return jsonify({'message': 'No recipes found'}), 204
+
     output = []
     for recipe in recipes:
         recipe_obj = {}
@@ -107,3 +112,40 @@ def rate_recipe(current_user, recipe_id):
     db.session.commit()
 
     return jsonify({'message': f'Recipe {recipe.name} successfully rated: {rating}'}), 201
+
+
+@recipes.route('/recipe/search')
+def search_recipes():
+    query_string = request.args
+    recipe_name = query_string['name']
+    recipe_text = query_string['text']
+    recipe_ingredients = query_string.getlist('ingredients')
+
+    f_recipes = Recipe.query.join(Recipe.used).filter(
+        and_(
+            Recipe.name.ilike(f'%{recipe_name}%'),
+            Recipe.text.ilike(f'%{recipe_text}%')
+            # Recipe.used.in_(recipe_ingredients)    # not yet supported, wth
+        )
+        ).filter(Ingredient.name.in_(recipe_ingredients)).all()
+    
+    print(Recipe.query.join(Recipe.used).all())
+
+    if not f_recipes:
+        return jsonify({}), 204
+
+    output = []
+    for recipe in f_recipes:
+        recipe_obj = {}
+        recipe_obj['name'] = recipe.name
+        recipe_obj['average_rating'] = recipe.average_rating
+        recipe_obj['text'] = recipe.name
+        recipe_obj['author'] = recipe.author.email
+        recipe_obj['ingredients'] = []
+
+        for ingredient in recipe.used:
+            recipe_obj['ingredients'].append(ingredient.name)
+            
+        output.append(recipe_obj)
+
+    return jsonify(output)
