@@ -1,13 +1,16 @@
-import os, jwt
+import os, jwt, json
+import clearbit
 from flask import Flask, Blueprint, jsonify, request, make_response
 from app import db, hunter
-from app.models.models import User
+from app.models.models import User, Enriched
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from datetime import datetime, timedelta
 
 users = Blueprint('user', __name__)
 
+
+clearbit.key = os.environ.get('CLEARBIT_KEY')
 
 # token decorator
 def token_required(f):
@@ -65,25 +68,38 @@ def get_all_users(current_user):
 def create_user():
     data = request.get_json()
 
+    # verify address
     try:
-        # hunter
         verify = hunter.email_verifier(data['email'])
         if verify.get('status') != 'valid':
-            return jsonify({'message': 'Email address not verified'})
-
-
-        hashed_password = generate_password_hash(str(data['password']), method='sha256')
-        new_user = User(
-            email=data['email'], 
-            first_name=data['first_name'], 
-            last_name=data['last_name'], 
-            password=hashed_password
-            )
-
-        db.session.add(new_user)
-        db.session.commit()
+            return jsonify({'message': 'Email address isn\'t verified'}), 400
     except:
-        return jsonify({'message': 'Invalid or missing fields'}), 400
+        return jsonify({'message': 'Unable to verify the address'}), 500
+
+    # try:
+    # create user account
+    hashed_password = generate_password_hash(str(data['password']), method='sha256')
+    new_user = User(
+        email=data['email'], 
+        first_name=data['first_name'], 
+        last_name=data['last_name'], 
+        password=hashed_password
+        )
+    db.session.add(new_user)
+
+    # try data enrichment
+    try:
+        enrich = clearbit.Enrichment.find(email=new_user.email, stream=True)
+        print(enrich)
+
+        enriched = Enriched(data=json.dumps(enrich), user=new_user)
+        print(enriched)
+        db.session.add(enriched)
+    except:
+        print(f'Couln\'t enrich user {new_user.email}')
+        pass
+
+    db.session.commit()
 
     return jsonify({'message': f'User {new_user.email} created'}), 201
 

@@ -2,7 +2,7 @@ from flask import Flask, Blueprint, jsonify, request
 from app import db
 from app.users.user_routes import token_required
 from app.models.models import Recipe, User, Ingredient, ingredients_used
-from sqlalchemy import and_
+from sqlalchemy import and_, desc, func, inspect
 
 recipes = Blueprint('recipes', __name__)
 
@@ -117,25 +117,60 @@ def rate_recipe(current_user, recipe_id):
 @recipes.route('/recipe/search')
 def search_recipes():
     query_string = request.args
-    recipe_name = query_string['name']
-    recipe_text = query_string['text']
-    recipe_ingredients = query_string.getlist('ingredients')
+    name_keyword = query_string.get('name')
+    text_keyword = query_string.get('text')
+    ingredient_keyword_list = query_string.getlist('ingredient')
 
-    f_recipes = Recipe.query.join(Recipe.used).filter(
-        and_(
-            Recipe.name.ilike(f'%{recipe_name}%'),
-            Recipe.text.ilike(f'%{recipe_text}%')
-            # Recipe.used.in_(recipe_ingredients)    # not yet supported, wth
-        )
-        ).filter(Ingredient.name.in_(recipe_ingredients)).all()
+    query = Recipe.query
+
+    if name_keyword:
+        query = query.filter(Recipe.name.ilike(f'%{name_keyword}%'))
+    if text_keyword:
+        query = query.filter(Recipe.text.ilike(f'%{text_keyword}%'))
+    # if ingredient_keyword_list and len(ingredient_keyword_list) != 0:
+    #     print('ingredients found')
+    #     query = query.join(Recipe.used).join(Ingredient.used).filter(Ingredient.name.contains(ingredient_keyword_list))
+        
+    query = query.all()
+
+    # f_recipes = Recipe.query.join(Recipe.used).filter(
+    #     and_(
+    #         Recipe.name.ilike(f'%{name_keyword}%'),
+    #         Recipe.text.ilike(f'%{text_keyword}%'),
+    #         # Recipe.used.in_(ingredient_keyword_list)    # not yet supported, wth
+    #     )
+    #     ).filter(Ingredient.name.in_(ingredient_keyword_list)).all()
     
-    print(Recipe.query.join(Recipe.used).all())
+    # if not f_recipes:
+    #     return jsonify({}), 204
 
-    if not f_recipes:
-        return jsonify({}), 204
+    # ------------------------------------------------------------
+    # query = Recipe.query
+    # recipe_query_params = {
+    #     'name': None,
+    #     'text': None,
+    #     'ingredients': None
+    # }
+    # recipe_query_params['name'] = query_string.get('name')
+    # recipe_query_params['text'] = query_string.get('text')
+    # recipe_query_params['ingredients'] = query_string.getlist('ingredients')
+    
+    # mapper = inspect(Recipe)
+    # print(str(mapper.attrs.get('name')).replace('Recipe.', ''))
+    # print(type(mapper.attrs.get('name')))
+
+    # filter_builder = []
+    # for param in recipe_query_params.items():
+    #     if not param[1] or param[1] == []:
+    #         print(param[0] + ' is None')
+    #         continue
+    #     print(param)
+    #     query = query.filter(mapper.attrs.get('name').ilike(f'%{param[1]}%'))
+
+    # final = query.all()
 
     output = []
-    for recipe in f_recipes:
+    for recipe in query:
         recipe_obj = {}
         recipe_obj['name'] = recipe.name
         recipe_obj['average_rating'] = recipe.average_rating
@@ -149,3 +184,26 @@ def search_recipes():
         output.append(recipe_obj)
 
     return jsonify(output)
+
+@recipes.route('/recipe/min_max')
+def get_min_max_recipes():
+    """
+    filter recipes by ingredients used
+
+    select recipe_id, count(ingredient_id) from ingredients_used
+    group by recipe_id
+    order by count(ingredient_id) <desc - asc>
+    """
+
+    max_ingredients = Recipe.query.join(Recipe.used).group_by(Recipe.id).order_by(desc(func.count(Ingredient.id))).all()
+
+    output = []
+    for recipe in max_ingredients:
+        recipe_obj = {}
+        recipe_obj['name'] = recipe.name
+        recipe_obj['ingredients'] = []
+        for ingredient in recipe.used:
+            recipe_obj['ingredients'].append(ingredient.name)
+        output.append(recipe_obj)
+
+    return jsonify({'max': output})

@@ -38,8 +38,22 @@ class User(db.Model):
     # though declared here, it actually resides in the Recipe model
     recipes_rated = db.relationship('Recipe', secondary=user_reviews, backref=db.backref('reviewers', lazy='dynamic'))
 
+    enriched = db.relationship('Enriched', uselist=False, back_populates='user')
+
+
     def __repr__(self):
         return f'User("{self.first_name}"), ("{self.last_name}"), ("{self.email}")'
+
+
+class Enriched(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    data = db.Column(db.Text)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user = db.relationship('User', back_populates='enriched')
+
+
+    def __repr__(self):
+        return f'Enriched user("{self.user_id}"), ("{self.data}")'
 
 
 class Recipe(db.Model):
