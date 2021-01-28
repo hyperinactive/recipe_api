@@ -14,17 +14,48 @@ recipes = Blueprint('recipes', __name__)
 @recipes.route('/recipe', methods=['GET'])
 @token_required
 def get_all_recipes(current_user):
-    recipes = Recipe.query.all()
+    query = Recipe.query
 
-    if not recipes:
+    query_string = request.args
+
+    # filters
+    name_keyword = query_string.get('name')
+    text_keyword = query_string.get('text')
+    ingredient_keyword_list = query_string.getlist('ingredient')
+
+    # order
+    order_keyword = query_string.get('order')
+
+    
+    if name_keyword:
+        query = query.filter(Recipe.name.ilike(f'%{name_keyword}%'))
+    if text_keyword:
+        query = query.filter(Recipe.text.ilike(f'%{text_keyword}%'))
+    if ingredient_keyword_list and len(ingredient_keyword_list) != 0:
+        print('ingredients found')
+        for item in ingredient_keyword_list:
+            item.lower()
+
+        query = query.join(Ingredient.used).group_by(Recipe.id)
+
+        for ingredient in ingredient_keyword_list:
+            query_tmp = query.filter(Ingredient.name.ilike(f'%{ingredient}%'))
+            print(ingredient)
+            # query = query.filter(Ingredient.name.ilike(f'%{ingredient}%'))
+            query = query.intersect(query_tmp)
+            print(query.all())
+            print(query_tmp.all())
+
+    query = query.all()
+    if len(query) == 0:
         return jsonify({'message': 'No recipes found'}), 204
 
     output = []
-    for recipe in recipes:
+    for recipe in query:
         recipe_obj = {}
         recipe_obj['name'] = recipe.name
         recipe_obj['average_rating'] = recipe.average_rating
-        recipe_obj['text'] = recipe.name
+        recipe_obj['text'] = recipe.text
         recipe_obj['author'] = recipe.author.email
         recipe_obj['ingredients'] = []
 
@@ -112,78 +143,7 @@ def rate_recipe(current_user, recipe_id):
     db.session.commit()
 
     return jsonify({'message': f'Recipe {recipe.name} successfully rated: {rating}'}), 201
-
-
-@recipes.route('/recipe/search')
-def search_recipes():
-    query_string = request.args
-    name_keyword = query_string.get('name')
-    text_keyword = query_string.get('text')
-    ingredient_keyword_list = query_string.getlist('ingredient')
-
-    query = Recipe.query
-
-    if name_keyword:
-        query = query.filter(Recipe.name.ilike(f'%{name_keyword}%'))
-    if text_keyword:
-        query = query.filter(Recipe.text.ilike(f'%{text_keyword}%'))
-    # if ingredient_keyword_list and len(ingredient_keyword_list) != 0:
-    #     print('ingredients found')
-    #     query = query.join(Recipe.used).join(Ingredient.used).filter(Ingredient.name.contains(ingredient_keyword_list))
-        
-    query = query.all()
-
-    # f_recipes = Recipe.query.join(Recipe.used).filter(
-    #     and_(
-    #         Recipe.name.ilike(f'%{name_keyword}%'),
-    #         Recipe.text.ilike(f'%{text_keyword}%'),
-    #         # Recipe.used.in_(ingredient_keyword_list)    # not yet supported, wth
-    #     )
-    #     ).filter(Ingredient.name.in_(ingredient_keyword_list)).all()
     
-    # if not f_recipes:
-    #     return jsonify({}), 204
-
-    # ------------------------------------------------------------
-    # query = Recipe.query
-    # recipe_query_params = {
-    #     'name': None,
-    #     'text': None,
-    #     'ingredients': None
-    # }
-    # recipe_query_params['name'] = query_string.get('name')
-    # recipe_query_params['text'] = query_string.get('text')
-    # recipe_query_params['ingredients'] = query_string.getlist('ingredients')
-    
-    # mapper = inspect(Recipe)
-    # print(str(mapper.attrs.get('name')).replace('Recipe.', ''))
-    # print(type(mapper.attrs.get('name')))
-
-    # filter_builder = []
-    # for param in recipe_query_params.items():
-    #     if not param[1] or param[1] == []:
-    #         print(param[0] + ' is None')
-    #         continue
-    #     print(param)
-    #     query = query.filter(mapper.attrs.get('name').ilike(f'%{param[1]}%'))
-
-    # final = query.all()
-
-    output = []
-    for recipe in query:
-        recipe_obj = {}
-        recipe_obj['name'] = recipe.name
-        recipe_obj['average_rating'] = recipe.average_rating
-        recipe_obj['text'] = recipe.name
-        recipe_obj['author'] = recipe.author.email
-        recipe_obj['ingredients'] = []
-
-        for ingredient in recipe.used:
-            recipe_obj['ingredients'].append(ingredient.name)
-            
-        output.append(recipe_obj)
-
-    return jsonify(output)
 
 @recipes.route('/recipe/min_max')
 def get_min_max_recipes():
@@ -201,6 +161,7 @@ def get_min_max_recipes():
     for recipe in max_ingredients:
         recipe_obj = {}
         recipe_obj['name'] = recipe.name
+        recipe_obj['average_rating'] = recipe.average_rating
         recipe_obj['ingredients'] = []
         for ingredient in recipe.used:
             recipe_obj['ingredients'].append(ingredient.name)
