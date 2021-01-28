@@ -14,8 +14,10 @@ recipes = Blueprint('recipes', __name__)
 @recipes.route('/recipe', methods=['GET'])
 @token_required
 def get_all_recipes(current_user):
-    query = Recipe.query
+    # default query
+    query = Recipe.query.join(Recipe.used).group_by(Recipe.id)
 
+    # get query string
     query_string = request.args
 
     # filters
@@ -26,25 +28,42 @@ def get_all_recipes(current_user):
     # order
     order_keyword = query_string.get('order')
 
-    
+    # go through args
     if name_keyword:
         query = query.filter(Recipe.name.ilike(f'%{name_keyword}%'))
     if text_keyword:
         query = query.filter(Recipe.text.ilike(f'%{text_keyword}%'))
     if ingredient_keyword_list and len(ingredient_keyword_list) != 0:
         print('ingredients found')
+
         for item in ingredient_keyword_list:
             item.lower()
 
-        query = query.join(Ingredient.used).group_by(Recipe.id)
+        # query = query.join(Ingredient.used).group_by(Recipe.id)
 
-        for ingredient in ingredient_keyword_list:
-            query_tmp = query.filter(Ingredient.name.ilike(f'%{ingredient}%'))
-            print(ingredient)
-            # query = query.filter(Ingredient.name.ilike(f'%{ingredient}%'))
-            query = query.intersect(query_tmp)
-            print(query.all())
-            print(query_tmp.all())
+        # for ingredient in ingredient_keyword_list:
+        #     query_tmp = query.filter(Ingredient.name.ilike(f'%{ingredient}%'))
+        #     print(ingredient)
+        #     # query = query.filter(Ingredient.name.ilike(f'%{ingredient}%'))
+        #     query = query.intersect(query_tmp)
+        #     print(query.all())
+        #     print(query_tmp.all())
+
+    # order the query
+    if order_keyword:
+
+        if order_keyword == 'max_ing':
+            """
+            filter recipes by ingredients used
+
+            select recipe_id, count(ingredient_id) from ingredients_used
+            group by recipe_id
+            order by count(ingredient_id) <desc - asc>
+            """
+            query = query.order_by(desc(func.count(Ingredient.id))) 
+        else:
+            query = query.order_by(func.count(Ingredient.id))
+
 
     query = query.all()
     if len(query) == 0:
@@ -143,28 +162,28 @@ def rate_recipe(current_user, recipe_id):
     db.session.commit()
 
     return jsonify({'message': f'Recipe {recipe.name} successfully rated: {rating}'}), 201
-    
 
-@recipes.route('/recipe/min_max')
-def get_min_max_recipes():
-    """
-    filter recipes by ingredients used
 
-    select recipe_id, count(ingredient_id) from ingredients_used
-    group by recipe_id
-    order by count(ingredient_id) <desc - asc>
-    """
+# @recipes.route('/recipe/min_max')
+# def get_min_max_recipes():
+#     """
+#     filter recipes by ingredients used
 
-    max_ingredients = Recipe.query.join(Recipe.used).group_by(Recipe.id).order_by(desc(func.count(Ingredient.id))).all()
+#     select recipe_id, count(ingredient_id) from ingredients_used
+#     group by recipe_id
+#     order by count(ingredient_id) <desc - asc>
+#     """
 
-    output = []
-    for recipe in max_ingredients:
-        recipe_obj = {}
-        recipe_obj['name'] = recipe.name
-        recipe_obj['average_rating'] = recipe.average_rating
-        recipe_obj['ingredients'] = []
-        for ingredient in recipe.used:
-            recipe_obj['ingredients'].append(ingredient.name)
-        output.append(recipe_obj)
+#     max_ingredients = Recipe.query.join(Recipe.used).group_by(Recipe.id).order_by(desc(func.count(Ingredient.id))).all()
 
-    return jsonify({'max': output})
+#     output = []
+#     for recipe in max_ingredients:
+#         recipe_obj = {}
+#         recipe_obj['name'] = recipe.name
+#         recipe_obj['average_rating'] = recipe.average_rating
+#         recipe_obj['ingredients'] = []
+#         for ingredient in recipe.used:
+#             recipe_obj['ingredients'].append(ingredient.name)
+#         output.append(recipe_obj)
+
+#     return jsonify({'max': output})

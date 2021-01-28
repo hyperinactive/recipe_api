@@ -1,5 +1,6 @@
 from app import db
 from flask import Blueprint
+from sqlalchemy.dialects.postgresql import JSON
 from datetime import datetime
 
 
@@ -31,7 +32,7 @@ class User(db.Model):
     email = db.Column(db.String(100), unique=True, nullable=False)
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
-    password = db.Column(db.String(50), nullable=False)
+    password = db.Column(db.String(150), nullable=False)
 
     # lazy load when necessary, author ref
     recipes_created = db.relationship('Recipe', backref='author', lazy=True)
@@ -47,7 +48,7 @@ class User(db.Model):
 
 class Enriched(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    data = db.Column(db.Text)
+    data = db.Column(JSON)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     user = db.relationship('User', back_populates='enriched')
 

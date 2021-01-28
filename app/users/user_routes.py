@@ -1,4 +1,4 @@
-import os, jwt, json
+import os, jwt
 import clearbit
 from flask import Flask, Blueprint, jsonify, request, make_response
 from app import db, hunter
@@ -90,10 +90,8 @@ def create_user():
     # try data enrichment
     try:
         enrich = clearbit.Enrichment.find(email=new_user.email, stream=True)
-        print(enrich)
 
-        enriched = Enriched(data=json.dumps(enrich), user=new_user)
-        print(enriched)
+        enriched = Enriched(data=enrich, user=new_user)
         db.session.add(enriched)
     except:
         print(f'Couln\'t enrich user {new_user.email}')
