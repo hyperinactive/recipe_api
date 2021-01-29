@@ -2,6 +2,7 @@ astroid==2.4.2
 certifi==2020.12.5
 cffi==1.14.4
 chardet==4.0.0
+clearbit==0.1.7
 click==7.1.2
 Flask==1.1.2
 Flask-SQLAlchemy==2.4.4
@@ -12,6 +13,7 @@ Jinja2==2.11.2
 lazy-object-proxy==1.4.3
 MarkupSafe==1.1.1
 mccabe==0.6.1
+psycopg2-binary==2.8.6
 pycparser==2.20
 pyhunter==1.7
 PyJWT==2.0.1

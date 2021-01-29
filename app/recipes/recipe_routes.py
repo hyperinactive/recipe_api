@@ -36,9 +36,10 @@ def get_all_recipes(current_user):
     if ingredient_keyword_list and len(ingredient_keyword_list) != 0:
         print('ingredients found')
 
-        for item in ingredient_keyword_list:
-            item.lower()
+        # for item in ingredient_keyword_list:
+        #     item.lower()
 
+        # query = query.filter(func.lower(Ingredient.name).in_(ingredient_keyword_list))
         # query = query.join(Ingredient.used).group_by(Recipe.id)
 
         # for ingredient in ingredient_keyword_list:
@@ -162,28 +163,3 @@ def rate_recipe(current_user, recipe_id):
     db.session.commit()
 
     return jsonify({'message': f'Recipe {recipe.name} successfully rated: {rating}'}), 201
-
-
-# @recipes.route('/recipe/min_max')
-# def get_min_max_recipes():
-#     """
-#     filter recipes by ingredients used
-
-#     select recipe_id, count(ingredient_id) from ingredients_used
-#     group by recipe_id
-#     order by count(ingredient_id) <desc - asc>
-#     """
-
-#     max_ingredients = Recipe.query.join(Recipe.used).group_by(Recipe.id).order_by(desc(func.count(Ingredient.id))).all()
-
-#     output = []
-#     for recipe in max_ingredients:
-#         recipe_obj = {}
-#         recipe_obj['name'] = recipe.name
-#         recipe_obj['average_rating'] = recipe.average_rating
-#         recipe_obj['ingredients'] = []
-#         for ingredient in recipe.used:
-#             recipe_obj['ingredients'].append(ingredient.name)
-#         output.append(recipe_obj)
-
-#     return jsonify({'max': output})
