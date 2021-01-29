@@ -11,7 +11,9 @@ hunter = PyHunter(os.environ.get('HUNTER_API_KEY'))
 
 # create an app instance
 def create_app(config_class=None):
-
+    """
+    Inits an app instance.
+    """
     app = Flask(__name__)
     # app.config.from_object(Config)
 

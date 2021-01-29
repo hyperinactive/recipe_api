@@ -14,6 +14,9 @@ clearbit.key = os.environ.get('CLEARBIT_KEY')
 
 # token decorator
 def token_required(f):
+    """
+    Token verifier decorator.
+    """
     @wraps(f)
     # positional and keyword arguments
     def decorated(*args, **kwargs):
@@ -50,6 +53,9 @@ def token_required(f):
 @users.route('/user', methods=['GET'])
 @token_required
 def get_all_users(current_user):
+    """
+    User route. Lists all users.
+    """
     users = User.query.all()
 
     output = []
@@ -61,11 +67,21 @@ def get_all_users(current_user):
         user_data['email'] = user.email
         output.append(user_data)
 
-    return jsonify({'users': output})
+    return jsonify({'message': 'List of all users, just a util route tbh', 'data': output})
 
 
 @users.route('/user/register', methods=['POST'])
 def create_user():
+    """
+    User route. User creation, verification and data enrichment. Reads from the body.
+
+    Requires:
+
+    first_name
+    last_name
+    email
+    password
+    """
     data = request.get_json()
 
     # verify address
@@ -104,6 +120,12 @@ def create_user():
 
 @users.route('/user/login', methods=['POST'])
 def login():
+    """
+    User route. Uses Basic auth and provides jwt tokens.
+
+    password - provide email
+    password - provide password
+    """
     auth = request.authorization
 
     # no authorization info or partials credentials
@@ -126,7 +148,7 @@ def login():
 
         return jsonify({
             'message': 'Token successfully created, please include it in the <x-access-token> header',
-            'token': token
+            'data': token
             }), 201
 
     return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required"'})

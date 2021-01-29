@@ -14,6 +14,15 @@ recipes = Blueprint('recipes', __name__)
 @recipes.route('/recipe', methods=['GET'])
 @token_required
 def get_all_recipes(current_user):
+    """
+    Recipe route. Recipe filtering based on provided query strings.
+    In case of no arguments being provided, it will default to listing all recipes.
+
+    query:
+    name - filter by name
+    text - filter by text
+    order - orders the query by the number of ingredients used
+    """
     # default query
     query = Recipe.query.join(Recipe.used).group_by(Recipe.id)
 
@@ -84,12 +93,15 @@ def get_all_recipes(current_user):
             
         output.append(recipe_obj)
 
-    return jsonify(output)
+    return jsonify({'message': 'Enjoy these recipes :)', 'data': output})
 
 
 @recipes.route('/recipe', methods=['POST'])
 @token_required
 def create_recipe(current_user):
+    """
+    Recipe route. Recipe creation. Supports simultaneous creation of multiple recipes.
+    """
     data = request.get_json()
 
     try:
@@ -121,6 +133,9 @@ def create_recipe(current_user):
 @recipes.route('/recipe/mine', methods=['GET'])
 @token_required
 def get_user_recipes(current_user):
+    """
+    Recipe route. Lists recipes posted by the current user.
+    """
     own_recipes = Recipe.query.filter_by(author_id=current_user.id).all()
 
     output = []
@@ -138,12 +153,15 @@ def get_user_recipes(current_user):
         output.append(recipe_obj)
         
 
-    return jsonify(output)
+    return jsonify({'message': 'List of your recipes', 'data': output})
 
 
 @recipes.route('/recipe/<int:recipe_id>', methods=['POST'])
 @token_required
 def rate_recipe(current_user, recipe_id):
+    """
+    Recipe route. Rates recipes (1-5).
+    """
     recipe = Recipe.query.filter_by(id=recipe_id).first()
 
     if recipe.author_id == current_user.id or current_user in recipe.reviewers:
@@ -162,4 +180,4 @@ def rate_recipe(current_user, recipe_id):
 
     db.session.commit()
 
-    return jsonify({'message': f'Recipe {recipe.name} successfully rated: {rating}'}), 201
+    return jsonify({'message': f'Recipe {recipe.name} successfully rated: {rating}'})
